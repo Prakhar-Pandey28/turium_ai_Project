@@ -1,256 +1,133 @@
-# AI Knowledge Box 🧠
+# 🧠 AI Knowledge Box
 
-A production-ready RAG (Retrieval-Augmented Generation) system that lets you save notes/URLs and search through them using AI.
+> **Interview Task Submission**: A minimal, production-style RAG web app.
 
-Built for **Turium AI** interview task.
+**Live Demo:** [Frontend](https://turium-ai-project.vercel.app) | [Backend](https://ai-knowledge-box.onrender.com/docs)
 
-## 🎯 What It Does
+---
 
-- **Save Knowledge**: Add text notes or paste URLs (auto-extracts content)
-- **Smart Search**: Ask questions in natural language
-- **AI Answers**: Get answers powered by Groq's Llama 3.3 with source citations
-- **Beautiful UI**: Modern, responsive interface matching Turium's design language
+## 🎯 Goal
+Build a small production-style web app that lets users:
+1. Save short notes or URLs.
+2. Ask questions over their saved content.
+3. Get answers powered by a simple RAG pipeline.
 
-## 🏗️ Architecture
+**Status:** ✅ Completed (Frontend + Backend + AI Integration + Deployment)
 
+---
+
+## 🛠 Features & Requirements Met
+
+### 1. Content Ingestion
+- [x] **Add Text Notes**: Simple text input for raw notes.
+- [x] **Add URLs**: Server-side fetching using **Jina AI Reader** to extract clean markdown from any URL.
+- [x] **Storage**: SQLite database storing raw content, timestamps, and source types.
+
+### 2. Semantic Search + RAG
+- [x] **Chunking Strategy**: Fixed-size window (800 chars) with overlap (100 chars).
+  - *Rationale*: Preserves context at boundaries without overcomplicating retrieval.
+- [x] **Embeddings**: `sentence-transformers/all-MiniLM-L6-v2`.
+  - *Choice*: Fast, local, and effective for English text (384d vectors).
+- [x] **Vector Storage**: JSON serialization in SQLite.
+  - *Tradeoff*: Simple to implement without extra infrastructure/Docker, though linear scan scales poorly beyond ~10k chunks.
+- [x] **LLM Integration**: Groq API (`llama-3.3-70b`) for ultra-fast inference.
+- [x] **Citations**: Returns source snippets with similarity scores (hidden in UI by default for cleanliness, but available in API).
+
+### 3. Frontend (React + Vite)
+- [x] **Clean UI**: Dark mode, professional aesthetics matching Turium branding.
+- [x] **State Management**: React Hooks (`useState`, `useEffect`).
+- [x] **Interactions**: Tabbed interface, loading states, error handling.
+
+### 4. API Design (FastAPI)
+- `POST /ingest`: Accepts JSON `{"content": "...", "url": "..."}`. Validates input.
+- `GET /items`: Returns list of ingested content with metadata.
+- `POST /query`: Accepts `{"question": "..."}`. Returns answer and sources.
+- **Quality**: Pydantic models for validation, proper HTTP error codes (400, 500), and structured logging.
+
+---
+
+## 🏗 Architecture
+
+```mermaid
+graph TD
+    User[User / Frontend] -->|HTTP Request| API[FastAPI Backend]
+    
+    subgraph "Ingestion Pipeline"
+        API -->|URL| Jina[Jina AI Reader]
+        Jina -->|Clean Text| Chunker[Chunker]
+        API -->|Text Note| Chunker
+        Chunker -->|Text Chunks| Embed[Embedding Model]
+        Embed -->|Vectors| DB[(SQLite DB)]
+    end
+    
+    subgraph "RAG Pipeline"
+        API -->|Question| Embed
+        Embed -->|Query Vector| VectorSearch[Cosine Similarity]
+        VectorSearch <-->|Fetch| DB
+        VectorSearch -->|Top Context| LLM[Groq Llama 3]
+        LLM -->|Answer| API
+    end
 ```
-Frontend (React + Vite)
-    ↓
-Backend (FastAPI)
-    ↓
-┌──────────────────┐
-│ 1. Jina Reader   │ → Extract clean text from URLs
-│ 2. Chunker       │ → Split into 800-char chunks (100 overlap)
-│ 3. Embeddings    │ → sentence-transformers/all-MiniLM-L6-v2
-│ 4. Vector Store  │ → SQLite with JSON embeddings
-│ 5. Retrieval     │ → Cosine similarity (top-5)
-│ 6. LLM           │ → Groq Llama 3.3 70B
-└──────────────────┘
-```
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- Groq API key ([get one free](https://console.groq.com))
+## 🧠 Design Decisions & Tradeoffs
 
-### Backend Setup
+### 1. Chunking Strategy
+- **Current**: Simple sliding window (800 chars, 100 overlap).
+- **Pro**: Easy to implement, predictable.
+- **Con**: Does not respect semantic boundaries (sentences/paragraphs).
+- **Production Change**: Use `RecursiveCharacterTextSplitter` (LangChain) or semantic chunking based on embedding similarity.
 
+### 2. Vector Store (SQLite)
+- **Current**: Accessing vectors stored as JSON strings in SQLite.
+- **Pro**: Zero external dependencies, single file database, perfect for "minimal" requirement.
+- **Con**: Linear search complexity O(N). SLOW at large scale.
+- **Production Change**: pgvector (PostgreSQL), Pinecone, or Weaviate for HNSW indexing (approximate nearest neighbor).
+
+### 3. Scalability (What breaks?)
+- **Latency**: Searching detailed vectors in SQLite will become noticeably slow >10k chunks.
+- **Context Window**: Simple concatenation of chunks might exceed LLM context limit if not managed.
+- **Formatting**: Complex PDFs or heavy JS websites usually fail simple scrapers. Jina AI helps, but isn't perfect.
+
+---
+
+## 🚀 Setup & Run Locally
+
+### Backend
 ```bash
 cd backend
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Create .env file
-echo "GROQ_API_KEY=your_key_here" > .env
-
-# Run server
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Create .env file with: GROQ_API_KEY=your_key
+uvicorn main:app --reload
 ```
 
-Server runs at: `http://localhost:8000`
-
-### Frontend Setup
-
+### Frontend
 ```bash
 cd frontend/vite-project
 npm install
 npm run dev
 ```
 
-App runs at: `http://localhost:5173`
+---
 
-## 📦 Deployment
+## 📦 Deployment Guide
 
-### Option 1: Vercel + Railway (Recommended - Free)
+### Backend (Render)
+Hosted on Render as a Web Service.
+- **Build Command**: `pip install --prefer-binary -r requirements.txt`
+- **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Env Vars**: `GROQ_API_KEY`
 
-**Frontend (Vercel):**
-```bash
-cd frontend/vite-project
-npm run build
-# Deploy to Vercel (one command)
-npx vercel --prod
-```
-
-**Backend (Railway):**
-1. Push to GitHub
-2. Go to [railway.app](https://railway.app)
-3. "New Project" → Import from GitHub
-4. Add `GROQ_API_KEY` in environment variables
-5. Deploy!
-
-**Update frontend API URL** in `App.jsx`:
-```javascript
-const API = "https://your-railway-app.railway.app";
-```
-
-### Option 2: Docker (Production-Ready)
-
-```bash
-docker-compose up --build
-```
-
-Access at `http://localhost:3000`
-
-## 🎨 Design Decisions
-
-### Chunking Strategy
-- **800 chars per chunk** - Balance between context and precision
-- **100 char overlap** - Prevents losing key phrases at boundaries
-- **Tradeoff**: Simple but effective. Would use LangChain's RecursiveTextSplitter for production.
-
-### Why Jina AI Reader?
-- Free, no API key needed
-- Converts any URL to clean markdown
-- Removes ads, navigation automatically
-- Better than BeautifulSoup for RAG
-
-### Vector Store Choice
-- **SQLite with JSON** - Simple, no extra dependencies
-- **Tradeoff**: Not optimized for >10k chunks. Would use Pinecone/Weaviate at scale.
-
-### Embedding Model
-- **all-MiniLM-L6-v2** - Fast, accurate, runs locally
-- **384 dimensions** - Good balance of speed/quality
-- **Tradeoff**: Smaller model than OpenAI's but free and fast
-
-## 🔧 API Endpoints
-
-### POST `/ingest`
-Stores a note or URL
-```json
-{
-  "content": "Your text here",
-  "url": "https://example.com"  // Optional
-}
-```
-
-### GET `/items`
-Lists all saved items
-```json
-[
-  [id, content, source_type, timestamp]
-]
-```
-
-### POST `/query`
-Searches and answers
-```json
-{
-  "question": "What is...?"
-}
-```
-
-**Response:**
-```json
-{
-  "answer": "Based on context...",
-  "sources": [
-    ["chunk text", 0.85],  // [text, similarity_score]
-    ...
-  ]
-}
-```
-
-## 📊 What Scales & What Breaks
-
-**Currently Handles:**
-- ✅ ~1000 notes/URLs
-- ✅ Single user
-- ✅ Concurrent requests (FastAPI async)
-
-**Breaks At Scale:**
-- ❌ >10k chunks (linear scan for cosine similarity)
-- ❌ Large files (no streaming)
-- ❌ Multi-user (no auth/isolation)
-
-**Production Changes:**
-1. **Vector DB**: Pinecone/Weaviate with HNSW indexing
-2. **Chunking**: LangChain RecursiveTextSplitter
-3. **Auth**: JWT tokens, user isolation
-4. **Caching**: Redis for embeddings
-5. **Monitoring**: Sentry, DataDog
-6. **Rate limiting**: Prevent abuse
-7. **Database**: PostgreSQL with pgvector
-
-## 🛠️ Tech Stack
-
-**Frontend:**
-- React 18 + Vite
-- CSS (no framework, custom design)
-- Fetch API
-
-**Backend:**
-- FastAPI (async Python)
-- SQLite
-- sentence-transformers
-- Groq API
-- Jina AI Reader
-
-## 📝 Project Structure
-
-```
-ai-knowledge-box/
-├── backend/
-│   ├── main.py           # FastAPI app & routes
-│   ├── db.py            # Database setup
-│   ├── chunker.py       # Text splitting logic
-│   ├── embeddings.py    # Vector generation
-│   ├── vector.py        # Similarity calculation
-│   ├── llm.py           # Groq integration
-│   ├── html_parser.py   # URL content extraction
-│   └── requirements.txt
-└── frontend/
-    └── vite-project/
-        └── src/
-            ├── App.jsx      # Main component
-            ├── App.css      # Turium-branded styles
-            └── main.jsx     # Entry point
-```
-
-## 🎥 Demo
-
-**Live Demo**: [Add your deployment URL here]
-
-**Screenshots**: See `/screenshots` folder
-
-## 🧪 Testing
-
-```bash
-# Test ingestion
-curl -X POST http://localhost:8000/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://en.wikipedia.org/wiki/Artificial_intelligence"}'
-
-# Test query
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question":"What is AI?"}'
-```
-
-## 🐛 Debugging
-
-**Check logs:**
-```bash
-# Backend logs show:
-# - INFO: Processing URL: ...
-# - INFO: Query: What is...
-# - ERROR: Failed to fetch URL: ...
-```
-
-**Common issues:**
-- CORS error → Check API URL in frontend
-- Empty results → Check if content was ingested
-- Slow queries → Database might be large
-
-## 📄 License
-
-MIT - Built as an interview task for Turium AI
+### Frontend (Vercel)
+Hosted on Vercel, connected to GitHub.
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
 
 ---
 
-**Time spent**: ~8 hours
-**Lines of code**: ~800 (backend + frontend)
-**External APIs**: Groq (LLM), Jina (URL parsing)
+**Author**: Prakhar Pandey
+**Timebox**: ~8 hours
