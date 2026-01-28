@@ -27,5 +27,6 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Documentation (local only)
-BUGFIXES.md
+# Documentation (local only) - keep only README.md
+*.md
+!README.md
