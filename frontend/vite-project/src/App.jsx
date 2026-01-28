@@ -39,24 +39,42 @@ export default function App() {
 
     setLoading(true);
     try {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch(`${API}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, url }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || "Ingestion failed");
       }
 
+      // Only clear inputs on success
       setContent("");
       setUrl("");
       fetchItems();
       setActiveTab("knowledge");
     } catch (error) {
       console.error("Ingestion error:", error);
-      alert(`Error: ${error.message}`);
+
+      // Better error messages
+      let errorMessage = error.message;
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timed out. The server might be slow. Please try again.";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+
+      alert(`Error: ${errorMessage}`);
+      // Don't clear content/url on error - user can retry
     } finally {
       setLoading(false);
     }
@@ -70,17 +88,33 @@ export default function App() {
     setSources([]);
 
     try {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const res = await fetch(`${API}/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       const data = await res.json();
       setAnswer(data.answer);
       setSources(data.sources || []);
     } catch (error) {
-      setAnswer("Error getting answer. Please try again.");
+      console.error("Query error:", error);
+
+      let errorMessage = "Error getting answer. Please try again.";
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timed out. The server might be slow. Please try again.";
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+
+      setAnswer(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -165,6 +199,7 @@ export default function App() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="input-field textarea"
+              disabled={loading}
             />
             <div className="divider">
               <span>OR</span>
@@ -174,7 +209,20 @@ export default function App() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="input-field"
+              disabled={loading}
             />
+            {loading && (
+              <div className="loader-container">
+                <div className="neural-loader">
+                  <div className="loader-ring"></div>
+                  <div className="loader-ring"></div>
+                  <div className="loader-ring"></div>
+                </div>
+                <p className="loader-text">
+                  {url ? "Fetching and processing URL..." : "Processing and embedding content..."}
+                </p>
+              </div>
+            )}
             <button onClick={handleIngest} className="cyber-button" disabled={loading}>
               <span className="button-glow"></span>
               <span className="button-text">
