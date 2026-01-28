@@ -170,9 +170,11 @@ export default function App() {
               onChange={(e) => setUrl(e.target.value)}
               className="input-field"
             />
-            <button onClick={handleIngest} className="cyber-button">
+            <button onClick={handleIngest} className="cyber-button" disabled={loading}>
               <span className="button-glow"></span>
-              <span className="button-text">Upload to Neural Net</span>
+              <span className="button-text">
+                {loading ? "Processing..." : "Upload to Neural Net"}
+              </span>
             </button>
           </div>
         )}
