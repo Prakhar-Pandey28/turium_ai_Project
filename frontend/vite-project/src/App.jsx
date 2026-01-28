@@ -33,6 +33,10 @@ export default function App() {
       return;
     }
 
+    // Prevent double submission (exhaustMap behavior)
+    if (loading) return;
+
+    setLoading(true);
     try {
       await fetch(`${API}/ingest`, {
         method: "POST",
@@ -44,8 +48,11 @@ export default function App() {
       setUrl("");
       fetchItems();
       setActiveTab("knowledge");
+      // Optional: alert success or just switch tabs
     } catch (error) {
       alert("Error ingesting content");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,9 +169,11 @@ export default function App() {
               onChange={(e) => setUrl(e.target.value)}
               className="input-field"
             />
-            <button onClick={handleIngest} className="cyber-button">
+            <button onClick={handleIngest} className="cyber-button" disabled={loading}>
               <span className="button-glow"></span>
-              <span className="button-text">Upload to Neural Net</span>
+              <span className="button-text">
+                {loading ? "Ingesting..." : "Upload to Neural Net"}
+              </span>
             </button>
           </div>
         )}
