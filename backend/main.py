@@ -161,3 +161,30 @@ def query(data: QueryReq):
     except Exception as e:
         logger.error(f"Query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+@app.post("/admin/reset")
+def reset_database(api_key: str):
+    """
+    Emergency endpoint to wipe the database.
+    Requires the GROQ_API_KEY as a password to prevent abuse.
+    """
+    import os
+    
+    # Simple security check - use your Groq key as the admin password
+    if api_key != os.getenv("GROQ_API_KEY"):
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+    
+    try:
+        # Delete all data
+        curr.execute("DELETE FROM chunks")
+        curr.execute("DELETE FROM items")
+        conn.commit()
+        
+        # Optimize DB size
+        curr.execute("VACUUM")
+        conn.commit()
+        
+        logger.warning("Database wiped by admin")
+        return {"message": "Database completely wiped"}
+    except Exception as e:
+        logger.error(f"Reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
