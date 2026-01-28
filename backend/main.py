@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel, validator
 from typing import Optional
 import json
@@ -48,12 +48,35 @@ class QueryReq(BaseModel):
             raise ValueError('Question cannot be empty')
         return v
 
+def process_embeddings_background(item_id: int, chunks: list):
+    """Background task to process embeddings without blocking the request"""
+    try:
+        logger.info(f"Background: Generating embeddings for {len(chunks)} chunks...")
+        embeddings = embed(chunks)
+        
+        # prepare data for bulk insert
+        chunk_data = [
+            (item_id, chunk, json.dumps(emb))
+            for chunk, emb in zip(chunks, embeddings)
+        ]
+        
+        # bulk insert
+        curr.executemany(
+            "INSERT INTO chunks (item_id, chunk_text, embedding) VALUES (?, ?, ?)",
+            chunk_data
+        )
+        conn.commit()
+        logger.info(f"Background: Completed {len(chunks)} chunks for item {item_id}")
+    except Exception as e:
+        logger.error(f"Background embedding failed: {e}")
+
 # API endpoints
 @app.post("/ingest")
-def ingest(data: IngestReq):
+def ingest(data: IngestReq, background_tasks: BackgroundTasks):
     """
     Takes either a text note or URL and stores it in the database
     Uses Jina AI to extract clean text from URLs
+    Processes embeddings in background for instant response
     """
     
     try:
@@ -76,7 +99,7 @@ def ingest(data: IngestReq):
         # break it into chunks so we can search through it later
         chunks = chunk_text(content)
         
-        # save the original item first
+        # save the original item first (instant)
         curr.execute(
             "INSERT INTO items (content, source, created_at) VALUES (?, ?, datetime('now'))",
             (content, source)
@@ -84,27 +107,11 @@ def ingest(data: IngestReq):
         item_id = curr.lastrowid
         conn.commit()
         
-        # process all chunks in parallel (batching)
-        # distinct speedup over looping one by one
-        logger.info(f"Generating embeddings for {len(chunks)} chunks...")
-        embeddings = embed(chunks)
+        # process embeddings in background (non-blocking)
+        background_tasks.add_task(process_embeddings_background, item_id, chunks)
         
-        # prepare data for bulk insert
-        chunk_data = [
-            (item_id, chunk, json.dumps(emb))
-            for chunk, emb in zip(chunks, embeddings)
-        ]
-        
-        # bulk insert is much faster
-        curr.executemany(
-            "INSERT INTO chunks (item_id, chunk_text, embedding) VALUES (?, ?, ?)",
-            chunk_data
-        )
-        
-        conn.commit()
-        logger.info(f"Ingested {len(chunks)} chunks for item {item_id}")
-        
-        return {"message": "Content ingested successfully"}
+        logger.info(f"Item {item_id} saved, processing {len(chunks)} chunks in background")
+        return {"message": "Content ingested successfully", "item_id": item_id}
     
     except HTTPException:
         raise
