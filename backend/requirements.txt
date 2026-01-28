@@ -1,4 +1,4 @@
-# Core dependencies - all with pre-built wheels for Python 3.13
+# Core dependencies - lightweight and fast
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.5
@@ -6,13 +6,9 @@ python-dotenv==1.0.0
 requests==2.32.3
 beautifulsoup4==4.12.3
 
-# Groq SDK
+# Groq SDK for LLM
 groq==0.13.0
 
-# Sentence transformers - latest with wheels
-sentence-transformers==3.3.1
-transformers==4.46.3
-torch==2.5.1
-numpy==2.0.2
-scikit-learn==1.6.0
-scipy==1.14.1
+# Note: We removed torch, sentence-transformers, numpy, scikit-learn, scipy
+# These were using ~500MB of RAM just for the embedding model
+# Now using Jina AI's free embeddings API instead - saves massive memory!

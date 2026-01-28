@@ -4,6 +4,7 @@ from typing import Optional
 import json
 import requests
 import logging
+import gc  # For memory cleanup
 
 from db import conn, curr
 from chunker import chunk_text
@@ -76,6 +77,12 @@ def ingest(data: IngestReq):
         # break it into chunks so we can search through it later
         chunks = chunk_text(content)
         
+        # Limit chunks to prevent memory issues (max ~100 chunks = ~80KB of text)
+        MAX_CHUNKS = 100
+        if len(chunks) > MAX_CHUNKS:
+            logger.warning(f"Content has {len(chunks)} chunks, limiting to {MAX_CHUNKS}")
+            chunks = chunks[:MAX_CHUNKS]
+        
         # save the original item first
         curr.execute(
             "INSERT INTO items (content, source, created_at) VALUES (?, ?, datetime('now'))",
@@ -103,13 +110,17 @@ def ingest(data: IngestReq):
         conn.commit()
         logger.info(f"Ingested {len(chunks)} chunks for item {item_id}")
         
+        # Force garbage collection to free memory immediately
+        gc.collect()
+        
         return {"message": "Content ingested successfully"}
     
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Ingestion failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
+ 
 
 @app.get("/items")
 def items():

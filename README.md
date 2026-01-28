@@ -26,8 +26,9 @@ Build a small production-style web app that lets users:
 ### 2. Semantic Search + RAG
 - [x] **Chunking Strategy**: Fixed-size window (800 chars) with overlap (100 chars).
   - *Rationale*: Preserves context at boundaries without overcomplicating retrieval.
-- [x] **Embeddings**: `sentence-transformers/all-MiniLM-L6-v2`.
-  - *Choice*: Fast, local, and effective for English text (384d vectors).
+- [x] **Embeddings**: Jina AI Embeddings API (`jina-embeddings-v3`).
+  - *Choice*: Cloud-based, saves ~500MB RAM vs local models, 768d vectors, optimized for RAG.
+  - *Benefit*: Fits in Render's free tier (512MB), faster startup, better quality.
 - [x] **Vector Storage**: JSON serialization in SQLite.
   - *Tradeoff*: Simple to implement without extra infrastructure/Docker, though linear scan scales poorly beyond ~10k chunks.
 - [x] **LLM Integration**: Groq API (`llama-3.3-70b`) for ultra-fast inference.
@@ -101,7 +102,10 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Create .env file with: GROQ_API_KEY=your_key
+# Create .env file with your API keys:
+# GROQ_API_KEY=your_groq_key (get from https://console.groq.com/keys)
+# JINA_API_KEY=your_jina_key (get from https://jina.ai/)
+
 uvicorn main:app --reload
 ```
 
@@ -120,7 +124,10 @@ npm run dev
 Hosted on Render as a Web Service.
 - **Build Command**: `pip install --prefer-binary -r requirements.txt`
 - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **Env Vars**: `GROQ_API_KEY`
+- **Env Vars**: 
+  - `GROQ_API_KEY` (required)
+  - `JINA_API_KEY` (required)
+- **Memory**: Optimized to use ~50MB (down from ~550MB) by using API-based embeddings
 
 ### Frontend (Vercel)
 Hosted on Vercel, connected to GitHub.
