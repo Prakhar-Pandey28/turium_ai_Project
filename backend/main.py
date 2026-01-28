@@ -70,7 +70,7 @@ def ingest(data: IngestReq):
             content = data.content
             source = "note"
         
-        if not content or len(content.strip()) < 10:
+        if not content or len(content.strip()) < 5:
             raise HTTPException(status_code=400, detail="Content too short or empty")
         
         # break it into chunks so we can search through it later
