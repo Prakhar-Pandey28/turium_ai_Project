@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
+// const API = "http://localhost:8000";
 const API = "https://ai-knowledge-box.onrender.com";
 
 export default function App() {
