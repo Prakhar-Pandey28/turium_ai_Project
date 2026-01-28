@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-// const API = "http://localhost:8000";
-const API = "https://ai-knowledge-box.onrender.com";
+//const API = "http://localhost:8000";
+const API = "https://ai-knowledge-box.onrender.com"; // Use this for production
 
 export default function App() {
   const [content, setContent] = useState("");
