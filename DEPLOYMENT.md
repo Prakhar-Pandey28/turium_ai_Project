@@ -1,8 +1,8 @@
 # 🚀 Deployment Guide
 
-## Easiest: Vercel (Frontend) + Railway (Backend)
+## Easiest: Vercel (Frontend) + Render (Backend)
 
-### Step 1: Deploy Backend to Railway
+### Step 1: Deploy Backend to Render
 
 1. **Push to GitHub** (if not already):
 ```bash
@@ -14,14 +14,23 @@ git remote add origin YOUR_GITHUB_REPO
 git push -u origin main
 ```
 
-2. **Deploy on Railway**:
-   - Go to [railway.app](https://railway.app)
-   - Click "Start a New Project"
-   - Select "Deploy from GitHub repo"
-   - Choose your repo → select `/backend` folder
-   - Add environment variable: `GROQ_API_KEY=your_key`
-   - Click "Deploy"
-   - Copy your railway URL (e.g., `https://ai-knowledge-box-production.up.railway.app`)
+2. **Deploy on Render**:
+   - Go to [render.com](https://render.com) and sign up
+   - Click **"New +"** → **"Web Service"**
+   - Select **"Build and deploy from a Git repository"**
+   - Connect your GitHub account and choose your repo
+   - Configure:
+     - **Name**: `ai-knowledge-box` (or any name)
+     - **Root Directory**: `backend`
+     - **Environment**: `Python 3.9` (important - select 3.9.x)
+     - **Build Command**: `pip install --prefer-binary -r requirements.txt`
+     - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - Click **"Advanced"** → Add environment variable:
+     - **Key**: `GROQ_API_KEY`
+     - **Value**: your Groq API key
+   - Click **"Create Web Service"**
+   - Wait ~5 minutes for first deploy
+   - Copy your Render URL (e.g., `https://ai-knowledge-box.onrender.com`)
 
 ### Step 2: Deploy Frontend to Vercel
 
@@ -29,8 +38,8 @@ git push -u origin main
 ```javascript
 // Change this line:
 const API = "http://localhost:8000";
-// To your Railway URL:
-const API = "https://your-app.railway.app";
+// To your Render URL:
+const API = "https://ai-knowledge-box.onrender.com";
 ```
 
 2. **Deploy**:
@@ -44,29 +53,59 @@ Done! You'll get a live URL like `https://ai-knowledge-box.vercel.app`
 
 ---
 
-## Alternative: Render (All-in-one - Free Tier)
+## Alternative Free Options
 
-### Backend on Render:
+### Option 2: Koyeb (Easy, Free Tier)
 
-1. Go to [render.com](https://render.com)
-2. New → Web Service
-3. Connect GitHub repo
-4. Settings:
-   - **Root Directory**: `backend`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - **Environment**: Add `GROQ_API_KEY`
-5. Create Web Service
+**Backend on Koyeb:**
+1. Go to [koyeb.com](https://koyeb.com) and sign up
+2. Click **"Create App"**
+3. Select **"GitHub"** and connect your repo
+4. Configure:
+   - **Root path**: `/backend`
+   - **Build command**: `pip install -r requirements.txt`
+   - **Run command**: `uvicorn main:app --host 0.0.0.0 --port 8000`
+   - Add env var: `GROQ_API_KEY`
+5. Deploy
 
-### Frontend on Render:
+**Pros**: Fast deploys, good free tier, simple UI
 
-1. New → Static Site
-2. Connect same repo
-3. Settings:
-   - **Root Directory**: `frontend/vite-project`
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `dist`
-4. Create Static Site
+---
+
+### Option 3: Fly.io (Fast Global Deploy)
+
+```bash
+# Install flyctl
+curl -L https://fly.io/install.sh | sh
+
+# Deploy backend
+cd backend
+fly launch --no-deploy
+fly secrets set GROQ_API_KEY=your_key
+fly deploy
+
+# Deploy frontend
+cd ../frontend/vite-project
+fly launch
+fly deploy
+```
+
+**Pros**: Global edge network, 3 VMs free, fast
+
+---
+
+### Option 4: All-in-One on Render
+
+**Both frontend and backend on Render (static + web service):**
+
+1. Deploy backend as web service (as above)
+2. Deploy frontend as static site:
+   - New → Static Site
+   - Root Directory: `frontend/vite-project`
+   - Build Command: `npm install && npm run build`
+   - Publish Directory: `dist`
+
+**Pros**: Everything in one place, easy to manage
 
 ---
 

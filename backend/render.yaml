@@ -1,0 +1,10 @@
+# Render specific config
+# This tells Render to use Python 3.9 and install system dependencies
+[build]
+  # Use Python 3.9.x
+  python_version = "3.9"
+
+[env]
+  # Ensure we use pre-built wheels, don't compile from source
+  PIP_NO_BUILD_ISOLATION = "false"
+  PIP_PREFER_BINARY = "1"
