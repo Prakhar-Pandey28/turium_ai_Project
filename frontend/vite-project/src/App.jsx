@@ -39,19 +39,24 @@ export default function App() {
 
     setLoading(true);
     try {
-      await fetch(`${API}/ingest`, {
+      const response = await fetch(`${API}/ingest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, url }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Ingestion failed");
+      }
+
       setContent("");
       setUrl("");
       fetchItems();
       setActiveTab("knowledge");
-      // Optional: alert success or just switch tabs
     } catch (error) {
-      alert("Error ingesting content");
+      console.error("Ingestion error:", error);
+      alert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
