@@ -84,15 +84,22 @@ def ingest(data: IngestReq):
         item_id = curr.lastrowid
         conn.commit()
         
-        # now process each chunk
-        for chunk in chunks:
-            embedding = embed(chunk)
-            
-            # store chunk with embedding
-            curr.execute(
-                "INSERT INTO chunks (item_id, chunk_text, embedding) VALUES (?, ?, ?)",
-                (item_id, chunk, json.dumps(embedding))
-            )
+        # process all chunks in parallel (batching)
+        # distinct speedup over looping one by one
+        logger.info(f"Generating embeddings for {len(chunks)} chunks...")
+        embeddings = embed(chunks)
+        
+        # prepare data for bulk insert
+        chunk_data = [
+            (item_id, chunk, json.dumps(emb))
+            for chunk, emb in zip(chunks, embeddings)
+        ]
+        
+        # bulk insert is much faster
+        curr.executemany(
+            "INSERT INTO chunks (item_id, chunk_text, embedding) VALUES (?, ?, ?)",
+            chunk_data
+        )
         
         conn.commit()
         logger.info(f"Ingested {len(chunks)} chunks for item {item_id}")
