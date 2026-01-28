@@ -1,4 +1,4 @@
-# Core dependencies - compatible with Python 3.11+
+# Core dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
@@ -9,10 +9,10 @@ beautifulsoup4==4.12.2
 # Groq SDK
 groq==0.4.1
 
-# Sentence transformers - versions with pre-built wheels for Python 3.11
-sentence-transformers==2.2.2
-transformers==4.35.2
-torch==2.1.2  # Changed from 2.1.1 - has wheels for Python 3.11
-numpy==1.26.0
-scikit-learn==1.3.2
-scipy==1.11.4
+# Sentence transformers - using LATEST versions compatible with Python 3.13
+sentence-transformers==3.3.1
+transformers==4.46.3
+torch==2.5.1  # Latest with Python 3.13 support
+numpy==2.0.2
+scikit-learn==1.6.0
+scipy==1.14.1
