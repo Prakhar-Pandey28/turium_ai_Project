@@ -10,7 +10,11 @@ def extract_text_from_url(url):
     try:
         # Special handling for Wikipedia - Jina AI is too aggressive
         if 'wikipedia.org' in url:
-            response = requests.get(url, timeout=30)
+            # Wikipedia requires a proper User-Agent header
+            headers = {
+                'User-Agent': 'TuriumAI-KnowledgeBox/1.0 (Educational RAG Demo; contact@example.com)'
+            }
+            response = requests.get(url, headers=headers, timeout=30)
             return extract_text_from_html(response.text)
         
         # Jina's free service that converts any URL to clean text
