@@ -8,6 +8,11 @@ def extract_text_from_url(url):
     Jina automatically removes ads, menus, etc and returns clean markdown
     """
     try:
+        # Special handling for Wikipedia - Jina AI is too aggressive
+        if 'wikipedia.org' in url:
+            response = requests.get(url, timeout=30)
+            return extract_text_from_html(response.text)
+        
         # Jina's free service that converts any URL to clean text
         jina_url = f"https://r.jina.ai/{url}"
         response = requests.get(jina_url, timeout=60)  # Increased timeout for slow servers
@@ -29,6 +34,7 @@ def extract_text_from_url(url):
             return extract_text_from_html(fallback_response.text)
         except:
             raise Exception(f"Failed to extract content from {url}: {str(e)}")
+
 
 
 def extract_text_from_html(html_content):
