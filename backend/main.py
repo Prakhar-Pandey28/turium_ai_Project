@@ -158,8 +158,8 @@ def query(data: QueryReq):
             score = cosine_similarity(query_embedding, embedding)
             scored.append((text, score))
         
-        # get top 5 most similar chunks
-        top = sorted(scored, key=lambda x: x[1], reverse=True)[:5]
+        # get top 10 most similar chunks (increased for better coverage)
+        top = sorted(scored, key=lambda x: x[1], reverse=True)[:10]
         
         # combine them into context
         context = "\n".join(t[0] for t in top)
